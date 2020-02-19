@@ -11,8 +11,8 @@ from sklearn.model_selection import train_test_split
 class MyGPModel(ExactGP):
     def __init__(self, train_inputs, train_targets, likelihood):
         super().__init__(train_inputs, train_targets, likelihood)
-        self.mean_module = gpytorch.means.ConstantMean()
-        self.covar_module = gpytorch.kernels.MaternKernel()
+        self.mean_module = gpytorch.means.ConstantMean(prior=gpytorch.priors.NormalPrior(0., 5.0))
+        self.covar_module = gpytorch.kernels.ScaleKernel(gpytorch.kernels.RBFKernel())
     
     def forward(self, x):
         mean = self.mean_module(x)
@@ -22,6 +22,7 @@ class MyGPModel(ExactGP):
 
 if __name__ == "__main__":
     # Model likelihood
+    # used for regression
     likelihood = gpytorch.likelihoods.GaussianLikelihood()
 
     X_all, y_all = load_boston(return_X_y=True)
@@ -37,7 +38,17 @@ if __name__ == "__main__":
     model.train()
     likelihood.train()
     
+
+    def make_prediction(model, x_pred):
+        """Return predictive distribution at points `x_pred`."""
+        return likelihood(model(x_pred))
+    
+    
+    # OPTIMIZE THE HYPERPARAMETERS
+    
     # Step 2: define marginal log likelihood
+    # we can use the exact marginal log likelihood because the dataset is small and
+    # regression is simple
     marg_ll = mlls.ExactMarginalLogLikelihood(likelihood, model)
     
     epochs = 80
@@ -58,10 +69,7 @@ if __name__ == "__main__":
     model.eval()
     likelihood.eval()
     
-    def make_prediction(model, x_pred):
-        """Return predictive distribution at points `x_pred`."""
-        return likelihood(model(x_pred))
-
+    
     with torch.no_grad():
         y_pred_dist = make_prediction(model, X_val)
         y_pred_mean = y_pred_dist.mean
