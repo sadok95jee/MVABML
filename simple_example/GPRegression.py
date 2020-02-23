@@ -8,7 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import minimize
 from scipy.spatial.distance import cdist
-
+import scipy.linalg
 
 # This file is attached with a jupyter notebook "GPRegression_Handcoded.ipynb"
 # which deal with a simple case in order to illustrate the GP regression.
@@ -67,7 +67,8 @@ class GPRegression:
             self.X_induced = X_induced
             self.Kmn = None
             self.Km = None
-            self.Qm_inv = None
+            self.Km_cholesky = None
+            self.Qm_cholesky = None
             self.Lambda = None
             
     def get_method(self):
@@ -101,16 +102,17 @@ class GPRegression:
             self.Knn = self.K_matrix(self.X_train , self.X_train) 
         else:
             self.Km = self.K_matrix(self.X_induced , self.X_induced) + 10**(-8)*np.identity(self.X_induced.shape[0])
+            self.Km_cholesky = np.linalg.cholesky(self.Km)
             self.Kmn = self.K_matrix(self.X_induced , self.X_train)            
             if self.method == "SPGP":
                 self.Knn = self.K_matrix(self.X_train , self.X_train) 
                 self.Lambda = np.diag(np.diag(self.Knn - self.Nystrom()))                   
         return 
     
-    def update_Qm_inv(self):
+    def update_Qm_cholesky(self):
         
-        """ Computes the inverse of the matrix Qm that we only need for the
-            posterior mean and the posterior variance.
+        """ Computes the Cholesky decomposition of the matrix Qm that we only 
+            need for the posterior mean and the posterior variance.
             
             We want to avoid unnecessary computations during the optimization
             phase.
@@ -119,23 +121,25 @@ class GPRegression:
         sigma = self.sigma
         n = self.sample_size       
         if self.method == 'PP':
-            self.Qm_inv = np.linalg.inv(self.Km + (1/sigma**2)*np.dot(self.Kmn , self.Kmn.T))
+            temp = self.Km + (1/sigma**2)*np.dot(self.Kmn , self.Kmn.T)
         elif self.method =='SPGP':
-            self.Qm_inv = np.linalg.inv(self.Km + np.dot(self.Kmn , np.dot(np.linalg.inv(self.Lambda + sigma**2*np.identity(n)) , self.Kmn.T))) 
-      
+            temp = self.Km + np.dot(self.Kmn , np.dot(np.linalg.inv(self.Lambda + sigma**2*np.identity(n)) , self.Kmn.T)) 
+        self.Qm_cholesky = np.linalg.cholesky(temp)
     
-    def covariance(self):
+    def cholesky_cov(self):
         
-        """ Computes the exact covariance matrix ("Full) or its approximate
-            version ("PP" , "SPGP")
+        """ Computes the Cholesky decomposition of the exact covariance matrix
+        ("Full) or its approximate version ("PP" , "SPGP")
         """
         
         if self.method == 'PP':
-            return self.Nystrom()
+            cov = self.Nystrom()
         elif self.method == 'SPGP':
-            return self.Lambda + self.Nystrom()
+            cov = self.Lambda + self.Nystrom()
         elif self.method == 'Full':
-            return self.Knn
+            cov =  self.Knn
+        result = cov + (self.sigma**2)*np.identity(self.sample_size)
+        return np.linalg.cholesky(result)
     
     def marginal_log_likelihood(self):
         
@@ -145,12 +149,12 @@ class GPRegression:
         """
         
         n = self.sample_size
-        temp = (self.sigma**2)*np.identity(n) + self.covariance()
-        return -0.5*(np.vdot(self.Y_train.T , np.dot(np.linalg.inv(temp) , self.Y_train)) 
-                     + np.log(np.abs(np.linalg.det(temp))) 
-                     + n*np.log(2*np.pi)
-                     )
-       
+        L = self.cholesky_cov()
+        temp = scipy.linalg.cho_solve((L , True) , self.Y_train)
+        return -0.5*(np.vdot(temp.T, temp) + 2*np.sum(np.log(np.diag(L)))
+             + n*np.log(2*np.pi)
+             )
+    
     def posterior_mean(self , X):
         
         """ Computes the posterior mean of the Gaussian process for
@@ -161,14 +165,22 @@ class GPRegression:
         n = self.sample_size
         if self.method == "Full":
             Kx = self.K_matrix(X , self.X_train)
-            temp = np.linalg.inv((sigma**2)*np.identity(n) + self.Knn)
+            L = self.cholesky_cov()
+            temp = scipy.linalg.cho_solve((L , True) , self.Y_train)
         elif self.method == "PP":
             Kx = self.K_matrix(X , self.X_induced)
-            temp = np.dot(self.Qm_inv , self.Kmn)*(1/sigma**2)
+            temp = (1/sigma**2)*(scipy.linalg.cho_solve((self.Qm_cholesky , True) 
+                                                        , np.dot(self.Kmn , self.Y_train))
+                                 )
         elif self.method == "SPGP":
             Kx = self.K_matrix(X , self.X_induced)
-            temp = np.dot(self.Qm_inv , np.dot(self.Kmn , np.linalg.inv(self.Lambda + sigma**2*np.identity(n))))            
-        return np.dot(Kx , np.dot(temp, self.Y_train))
+            tempbis = np.linalg.inv(self.Lambda + sigma**2*np.identity(n))
+            temp = scipy.linalg.cho_solve((self.Qm_cholesky , True) ,
+                                             np.dot(self.Kmn , 
+                                                    np.dot(tempbis , self.Y_train)
+                                                    )
+                                           )
+        return np.dot(Kx , temp)
     
     def posterior_cov(self , X):
         
@@ -178,13 +190,14 @@ class GPRegression:
         
         Kxx = self.K_matrix(X, X)
         if self.method == "PP" or self.method == "SPGP":
-            temp = np.linalg.inv(self.Km) - self.Qm_inv
             Kxm = self.K_matrix(X, self.X_induced)
-            return Kxx - np.dot(Kxm , np.dot(temp , Kxm.T)) + self.sigma**2
+            temp = ( scipy.linalg.cho_solve((self.Km_cholesky , True) , Kxm.T) 
+                    - scipy.linalg.cho_solve((self.Qm_cholesky , True) , Kxm.T) ) 
+            return Kxx - np.dot(Kxm , temp) + self.sigma**2
         else:
-            temp = np.linalg.inv((self.sigma**2)*np.identity(self.sample_size) + self.Knn)
             Kxn = self.K_matrix(X, self.X_train)
-            return Kxx - np.dot(Kxn , np.dot(temp , Kxn.T)) + self.sigma**2
+            temp = np.linalg.solve(self.cholesky_cov() , Kxn.T)
+            return Kxx - np.dot(temp.T, temp) + self.sigma**2
  
 
     
@@ -206,26 +219,22 @@ def optimize_hyperparameters(GPR , theta0 , sigma0 , X_induced0 = None):
     """
     if GPR.get_method() == "Full":
         def objective(x):
- #           GPR.reset(x[:-1] , x[-1])
-            GPR.reset(x , sigma0)
+            GPR.reset(x[:-1] , x[-1])
             GPR.update()
             return  - GPR.marginal_log_likelihood()
-  #      init = np.hstack((theta0 , sigma0))
-        init = theta0
+        init = np.hstack((theta0 , sigma0))
         result = minimize(objective , init , method='BFGS',  options={'gtol': 1e-6, 'disp': True})
-   #     return result.x[:-1] , result.x[-1]
-        return result.x , sigma0
+        print("theta* = " , result.x[:-1] , "sigma* = " , result.x[-1])
+        return result.x[:-1] , result.x[-1]
     else:
         def objective(x):
- #           GPR.reset(x[:2] , x[2] , x[3:].reshape(-1 , 1))
-            GPR.reset(x[:2] , sigma0 , x[2:].reshape(-1 , 1))
+            GPR.reset(x[:2] , x[2] , x[3:].reshape(-1 , 1))
             GPR.update()
             return - GPR.marginal_log_likelihood()
-#        init = np.hstack((theta0 , sigma0 ,X_induced0))
-        init = np.hstack((theta0 , X_induced0))
+        init = np.hstack((theta0 , sigma0 ,X_induced0))
         result = minimize(objective , init , method='BFGS',  options={'gtol': 1e-6, 'disp': True})
-#        return result.x[:2] , result.x[2] , result.x[3:].reshape(-1 , 1)
-        return result.x[:2] , sigma0, result.x[2:].reshape(-1 , 1)
+        print("theta* =" , result.x[:2] , "sigma* = " , result.x[2])
+        return result.x[:2] , result.x[2] , result.x[3:].reshape(-1 , 1)
         
         
 
@@ -251,7 +260,7 @@ def Predict(GPR , X_test , theta0 , sigma0 , m = None):
         X_train = GPR.get_X_train()
         X_induced0 = X_train[np.random.choice(X_train.shape[0],size = m) , :].reshape(-1)
         theta , sigma , X_induced = optimize_hyperparameters(GPR , theta0 , sigma0  ,X_induced0)
-        GPR.update_Qm_inv()
+        GPR.update_Qm_cholesky()
         PM = GPR.posterior_mean(X_test)
         std = np.sqrt(np.diag(GPR.posterior_cov(X_test))).reshape(PM.shape)
         return PM , std , X_induced0
