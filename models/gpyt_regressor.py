@@ -9,9 +9,10 @@ from sklearn.model_selection import train_test_split
 
 
 class MyGPModel(ExactGP):
+    
     def __init__(self, train_inputs, train_targets, likelihood):
         super().__init__(train_inputs, train_targets, likelihood)
-        self.mean_module = gpytorch.means.ConstantMean(prior=gpytorch.priors.NormalPrior(0., 5.0))
+        self.mean_module = gpytorch.means.ZeroMean()
         self.covar_module = gpytorch.kernels.ScaleKernel(gpytorch.kernels.RBFKernel())
     
     def forward(self, x):
