@@ -151,7 +151,7 @@ class GPRegression:
         n = self.sample_size
         L = self.cholesky_cov()
         temp = scipy.linalg.cho_solve((L , True) , self.Y_train)
-        return -0.5*(np.vdot(temp.T, temp) + 2*np.sum(np.log(np.diag(L)))
+        return -0.5*(np.vdot(self.Y_train, temp) + 2*np.sum(np.log(np.diag(L)))
              + n*np.log(2*np.pi)
              )
     
