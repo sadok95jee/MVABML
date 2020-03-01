@@ -57,6 +57,7 @@ class GPRegression:
         self.kernel_type = kernel
         self.sample_size = X_train.shape[0]
         self.dimension = X_train.shape[1]
+        
 
     def reset(self , theta , sigma , X_induced = None):
         self.theta = theta
@@ -70,18 +71,7 @@ class GPRegression:
             self.Km_cholesky = None
             self.Qm_cholesky = None
             self.Lambda = None
-            
-    def get_method(self):
-        return self.method
-    
-    def get_X_train(self):
-        return self.X_train
-    
-    def get_Y_train(self):
-        return self.Y_train
 
-    def get_X_induced(self):
-        return self.X_induced      
 
     def K_matrix(self , X , Y):
         return self.gp.prior_kernel(cdist(X , Y))
@@ -211,13 +201,8 @@ def optimize_hyperparameters(GPR , theta0 , sigma0 , X_induced0 = None):
         
         theta0 , sigma0 , X_induced0 are given in order to initialize the
         minimize method.
-        
-        NB: Currently we encounter difficulties when it comes to optimize the
-            variance sigma. So, we consider for the moment a fixed sigma.
-            Uncomment and delete the each line below to recover the full 
-            optimization.
     """
-    if GPR.get_method() == "Full":
+    if getattr(GPR , "method") == "Full":
         def objective(x):
             GPR.reset(x[:-1] , x[-1])
             GPR.update()
@@ -239,7 +224,7 @@ def optimize_hyperparameters(GPR , theta0 , sigma0 , X_induced0 = None):
         
 
 
-def Predict(GPR , X_test , theta0 , sigma0 , m = None):
+def predict(GPR , X_test , theta0 , sigma0 , m = None):
     
     """ Main function:        
         Optimizes the hyperparameters of our regression model and then, given
@@ -250,14 +235,14 @@ def Predict(GPR , X_test , theta0 , sigma0 , m = None):
         points for plotting purposes.
     """
     
-    method = GPR.get_method()
+    method = getattr(GPR , "method")
     if method == "Full":
         theta , sigma = optimize_hyperparameters(GPR , theta0 , sigma0)
         PM = GPR.posterior_mean(X_test)
         std = np.sqrt(np.diag(GPR.posterior_cov(X_test))).reshape(PM.shape)
         return PM , std
     else:
-        X_train = GPR.get_X_train()
+        X_train = getattr(GPR , "X_train")
         X_induced0 = X_train[np.random.choice(X_train.shape[0],size = m) , :].reshape(-1)
         theta , sigma , X_induced = optimize_hyperparameters(GPR , theta0 , sigma0  ,X_induced0)
         GPR.update_Qm_cholesky()
@@ -273,17 +258,17 @@ def plot_regression(GPR , X_test , PM , std , X_induced0 = None):
         of Titsias.
     """  
     
-    method = GPR.get_method()
+    method = getattr(GPR , "method")
     
     plt.figure(figsize=(10 , 6))
-    plt.scatter(GPR.get_X_train() , GPR.get_Y_train() , marker = 'x' ,label = 'Training data')
+    plt.scatter(getattr(GPR , "X_train") , getattr(GPR , "Y_train") , marker = 'x' ,label = 'Training data')
     plt.plot(X_test , PM , 'b' , label = 'mean prediction')
     plt.plot(X_test , PM -std , '--' ,  color='red' , label = 'Standard deviation')
     plt.plot(X_test , PM + std , '--' , color='red')   
     if (method == 'PP') or (method == 'SPGP'):
         plt.scatter(X_induced0 , (max(PM + std) + 0.5)*np.ones(X_induced0.shape[0]) 
                              , marker='+' , color='k' , label = 'Initial induced points' )
-        plt.scatter(GPR.get_X_induced() , (min(PM - std) - 0.5)*np.ones(X_induced0.shape[0]) 
+        plt.scatter(getattr(GPR , "X_induced"), (min(PM - std) - 0.5)*np.ones(X_induced0.shape[0]) 
                                     , marker='+' , color='r' ,  label = 'Induced points' )
     plt.legend()
     plt.title(method + " Gaussian Process Regression")
