@@ -2,12 +2,22 @@
 
 This is for the course [_Bayesian Machine Learning_](https://github.com/rbardenet/bml-course) at the master MVA.
 
-## Run code
+## Data layout
 
-```bash
-python models/gpyt_regressor.py
+### New York Taxi
+
+```
+taxi-data
+    - test.csv
+    - train.csv
 ```
 
+## Experiments
+
+We provide notebooks to run experiments:
+* [Hand-coded GP regression using Numpy/Scipy](simple_example/GPRegression_Handcoded.ipynb)
+* [A comparison of approximate GP regression schemes](sparse_gp_comparison.ipynb)
+* [GP regression on the (massive) NYC Taxi dataset](taxi.ipynb)
 
 ## References
 
