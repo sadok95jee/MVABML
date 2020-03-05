@@ -263,8 +263,8 @@ def plot_regression(GPR , X_test , PM , std , X_induced0 = None):
     plt.figure(figsize=(10 , 6))
     plt.scatter(getattr(GPR , "X_train") , getattr(GPR , "Y_train") , marker = 'x' ,label = 'Training data')
     plt.plot(X_test , PM , 'b' , label = 'mean prediction')
-    plt.plot(X_test , PM -std , '--' ,  color='red' , label = 'Standard deviation')
-    plt.plot(X_test , PM + std , '--' , color='red')   
+    plt.plot(X_test , PM - 2*std , '--' ,  color='red' , label = 'Standard deviation')
+    plt.plot(X_test , PM + 2*std , '--' , color='red')   
     if (method == 'PP') or (method == 'SPGP'):
         plt.scatter(X_induced0 , (max(PM + std) + 0.5)*np.ones(X_induced0.shape[0]) 
                              , marker='+' , color='k' , label = 'Initial induced points' )
