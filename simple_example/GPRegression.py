@@ -270,7 +270,7 @@ def plot_regression(GPR , X_test , PM , std , X_induced0 = None):
                              , marker='+' , color='k' , label = 'Initial induced points' )
         plt.scatter(getattr(GPR , "X_induced"), (min(PM - std) - 0.5)*np.ones(X_induced0.shape[0]) 
                                     , marker='+' , color='r' ,  label = 'Induced points' )
-    plt.legend()
+    plt.legend(loc = 'lower right')
     plt.title(method + " Gaussian Process Regression")
     return
 
