@@ -19,8 +19,8 @@ class MyGPModel(ExactGP):
         else:
             dims = 1
         self.mean_module = gpytorch.means.ZeroMean()
-        self.covar_module = ScaleKernel(RBFKernel(ard_num_dims=dims))
-        # self.covar_module = ScaleKernel(MaternKernel(ard_num_dims=dims, nu=2.5))
+        # self.covar_module = ScaleKernel(RBFKernel(ard_num_dims=dims))
+        self.covar_module = ScaleKernel(MaternKernel(ard_num_dims=dims, nu=1.5))
     
     def forward(self, x):
         mean = self.mean_module(x)
