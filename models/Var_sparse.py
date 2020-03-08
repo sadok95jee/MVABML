@@ -2,7 +2,7 @@ from gpytorch.models import ApproximateGP
 from gpytorch.variational import CholeskyVariationalDistribution
 from gpytorch.variational import VariationalStrategy
 
-class GPModel(ApproximateGP):
+class VarsparseGPModel(ApproximateGP):
     def __init__(self, inducing_points):
         if (inducing_points.ndim ==2):
             dims = inducing_points.shape[1]
