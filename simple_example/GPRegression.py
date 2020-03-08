@@ -266,9 +266,9 @@ def plot_regression(GPR , X_test , PM , std , X_induced0 = None):
     plt.plot(X_test , PM - 2*std , '--' ,  color='red' , label = 'Standard deviation')
     plt.plot(X_test , PM + 2*std , '--' , color='red')   
     if (method == 'PP') or (method == 'SPGP'):
-        plt.scatter(X_induced0 , (max(PM + std) + 0.5)*np.ones(X_induced0.shape[0]) 
+        plt.scatter(X_induced0 , (max(PM + 2*std) + 0.5)*np.ones(X_induced0.shape[0]) 
                              , marker='+' , color='k' , label = 'Initial induced points' )
-        plt.scatter(getattr(GPR , "X_induced"), (min(PM - std) - 0.5)*np.ones(X_induced0.shape[0]) 
+        plt.scatter(getattr(GPR , "X_induced"), (min(PM - 2*std) - 0.5)*np.ones(X_induced0.shape[0]) 
                                     , marker='+' , color='r' ,  label = 'Induced points' )
     plt.legend(loc = 'lower right')
     plt.title(method + " Gaussian Process Regression")

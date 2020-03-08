@@ -268,7 +268,7 @@ def plot_regression(Greedy , X_test , PM , std , ML):
     plt.plot(X_test , PM , 'b' , label = 'mean prediction')
     plt.plot(X_test , PM -2*std , '--' ,  color='red' , label = 'Standard deviation')
     plt.plot(X_test , PM + 2*std , '--' , color='red')  
-    plt.scatter(getattr(Greedy , "X_induced") , (min(PM - std) - 0.5)*np.ones(getattr(Greedy , "X_induced").shape[0]) 
+    plt.scatter(getattr(Greedy , "X_induced") , (min(PM - 2*std) - 0.5)*np.ones(getattr(Greedy , "X_induced").shape[0]) 
                                     , marker='+' , color='r' ,  label = 'Induced points' )
     plt.legend(loc = 'lower right')
     plt.title("Variational Gaussian Process Regression")
