@@ -6,11 +6,19 @@ This code is for the project for the master MVA course [_Bayesian Machine Learni
 
 ## Data layout
 
+### Toy data
+
+```
+data/1D_toy_data
+    - Simple_test.csv
+    - Simple_train.csv
+```
+
 ### New York Taxi
 
-Get the dataset [here](https://www.kaggle.com/c/nyc-taxi-trip-duration/data).
+Get the dataset [here](https://www.kaggle.com/c/nyc-taxi-trip-duration/data). The folders should look like this:
 ```
-taxi-data
+data/taxi-data
     - test.csv
     - train.csv
 ```

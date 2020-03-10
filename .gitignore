@@ -1,4 +1,4 @@
 .vscode
 .ipynb_checkpoints
 *.pyc
-taxi-data/
+data/taxi-data/*.csv
