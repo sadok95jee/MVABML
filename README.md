@@ -8,6 +8,7 @@ This code is for the project for the master MVA course [_Bayesian Machine Learni
 
 ### New York Taxi
 
+Get the dataset [here](https://www.kaggle.com/c/nyc-taxi-trip-duration/data).
 ```
 taxi-data
     - test.csv
