@@ -2,3 +2,17 @@
 .ipynb_checkpoints
 *.pyc
 data/taxi-data/*.csv
+
+*.aux
+*.out
+*.bcf
+*.out
+*.nav
+*.bbl
+slides/slides.blg
+slides/slides.log
+slides/slides.run.xml
+slides/slides.snm
+slides/slides.synctex.gz
+slides/slides.toc
+
